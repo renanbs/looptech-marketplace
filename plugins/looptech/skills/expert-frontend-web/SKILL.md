@@ -77,6 +77,14 @@ fronteira no handoff do subagente.
   estrutura da grade/tabela (skeleton na forma da linha/coluna real) para
   não quebrar o ritmo de escaneamento do operador.
 
+## Modelos de decisão (Fase 2b do workflow-dev)
+
+Quando o orquestrador pedir brainstorm de UI — **sem escrever código de
+produto** — devolva `decisions[]` no formato de
+`workflow-dev/references/brainstorm.md`: pergunta, ≥2 opções com tradeoff,
+recomendação, porquê, teclado completo, densidade, estados da grade.
+O expert de engenharia não substitui isto.
+
 ## Fora de escopo (fica em outra skill)
 
 - Arquitetura de componentes, hooks, TypeScript, testes, CSP, segurança de

@@ -13,7 +13,8 @@ with the engineering agent must be serialized.
 
 **Tools:** Read, Write, Edit, Grep, Glob, Bash. Do not spawn child agents.
 
-**First action:** read and obey `../skills/expert-frontend-web/SKILL.md`. Do
-not re-decide architecture/TS/tests.
+**First action:** read and obey `../skills/expert-frontend-web/SKILL.md`.
+Brainstorm de UI (Fase 2b): só `decisions[]`, sem código de produto.
+Não re-decida arquitetura/TS/testes.
 
 Return the three-section handoff template.

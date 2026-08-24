@@ -32,20 +32,29 @@ vcs:       { base: <base>, pr_target: <base>, prefixes: [feature, fix, hotfix], 
 specs_dir: <destino>/<feature>/    # ver bloco memory: — .specs/ só como fallback
 commands:
   expert-backend-go:
-    test:  "<comando de teste do Profile>"
-    integ: "<comando de teste de integração do Profile>"
-    lint:  "<comando de lint do Profile>"   # forma que espelha o CI; DEVE reportar "0 issues"
-    build: "<comando de build do Profile>"
+    test:  "<unitário do Profile>"
+    integ: "<integração do Profile>"
+    e2e:   "<e2e HTTP da feature, se o projeto tiver>"
+    lint:  "<lint do Profile>"
+    build: "<build do Profile>"
+  expert-backend-python:
+    test:  "<unitário do Profile>"
+    integ: "<integração do Profile>"
+    e2e:   "<e2e HTTP da feature, se o projeto tiver>"
+    lint:  "<lint do Profile>"
+    types: "<mypy/strict do Profile>"
   expert-frontend-react:
-    test:  "<comando de teste do Profile>"
-    lint:  "<comando de lint do Profile>"
-    types: "<comando de checagem de tipos do Profile>"
-    build: "<comando de build do Profile>"
+    test:  "<vitest do Profile>"
+    e2e:   "<playwright do Profile>"
+    lint:  "<lint do Profile>"
+    types: "<typecheck do Profile>"
+    build: "<build do Profile>"
   expert-frontend-vue:
-    test:  "<comando de teste do Profile>"
-    lint:  "<comando de lint do Profile>"
-    types: "<comando de checagem de tipos do Profile>"
-    build: "<comando de build do Profile>"
+    test:  "<vitest do Profile>"
+    e2e:   "<playwright do Profile>"
+    lint:  "<lint do Profile>"
+    types: "<typecheck do Profile>"
+    build: "<build do Profile>"
 database:
   connections: { stage: <nome-da-conexão-stage>, prod: <nome-da-conexão-prod> }
   dialect: <dialeto>
@@ -91,7 +100,7 @@ memory:
 | Nenhum dos dois | `.specs/<feature>/` (**fallback**) | — · sugira `memory-graph:memory-vault-setup` |
 
 Em qualquer um dos três, o nome do documento é **`<Tipo> - <Título da feature>`**
-(`Spec` · `Design` · `Tasks` · `Plan`), com o título vindo da **feature**. Nunca `spec.md`.
+(`Brainstorm` · `Goals` · `Spec` · `Design` · `Tasks` · `Plan`). Nunca `spec.md`.
 
 > Projeto com bloco `memory:` **não** deve ganhar um `.specs/` — memória em dois lugares
 > diverge, e a divergência não avisa.
@@ -129,7 +138,7 @@ A skill de engenharia despachada é a do Profile (`expert-frontend-react` **ou**
 - **Sub-projetos** — todo path relevante do repositório e sua stack.
 - **Stack por path** — engenharia (`expert-backend-*`, `expert-frontend-*`) e, quando
   aplicável, UX (`ux_default`/`ux_overrides`).
-- **Comandos por stack** — test/lint/types/build, na forma exata que o CI usa.
+- **Comandos por stack** — test/integ/e2e/lint/types/build, na forma exata do CI. Frontend `e2e` é Playwright.
 - **Convenção de branch/PR** — branch base, alvo de PR, prefixos, base de hotfix.
 - **`specs_dir`** — onde ficam spec/design/tasks, **quando não há bloco `memory:`**.
 - **Bloco `memory`** (se houver) — vault, produtos e política de PII; vence o `specs_dir` e

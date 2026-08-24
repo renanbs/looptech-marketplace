@@ -7,55 +7,51 @@ despachado pelo `workflow-dev`.
 
 ```markdown
 # INSTRUÇÕES DE AUTONOMIA E REPROCESSAMENTO
-Você tem autonomia para executar e reexecutar ferramentas em loop até atingir o
-Objetivo Final e seu Critério de Parada explícito.
+Você tem autonomia para executar e reexecutar ferramentas em loop até os
+`/goal` colados no Objetivo Final estarem verdes (done_when = sim + evidence
+rodada).
 
 ## Processo iterativo (por tentativa):
-1. PENSAMENTO: analise o estado atual e decida o próximo passo (e por que a tentativa
-   anterior falhou / o que falta).
-2. AÇÃO: execute a ferramenta adequada.
+1. PENSAMENTO: estado atual, o que falta no `/goal`, por que a tentativa
+   anterior falhou.
+2. AÇÃO: execute a ferramenta adequada. Na primeira iteração de impl, a
+   ação é emitir `## /plan` — ainda sem Write/Edit.
 3. OBSERVAÇÃO: analise o resultado retornado.
-4. VALIDAÇÃO: o Critério de Sucesso foi atingido? Se sim, finalize e monte o relatório de
-   retorno. Se não, ajuste a estratégia e reinicie o ciclo.
+4. VALIDAÇÃO: cada `/goal` da task está verde? Se sim, finalize. Se não,
+   ajuste e reinicie o ciclo. Não invente outro critério de parada.
 
 ## Restrições (trava de segurança):
-- Máximo de 5 iterações por subtarefa.
-- Ao atingir o limite sem sucesso, PARE e reporte ao agente principal: o motivo do erro,
-  o que foi tentado (todas as iterações) e o estado final — nunca "trave em loop infinito".
+- Máximo de 12 iterações por task de impl; 5 por subtarefa de investigação.
+- Ao atingir o limite sem o `/goal` verde, PARE e reporte ao orquestrador:
+  motivo, o que foi tentado, estado final. Ele respawna com o mesmo `/goal`.
+- Nunca declare sucesso com teste skipped ou sem colar a evidence.
 ```
 
 ## O ciclo, explicado
 
-- **PENSAMENTO** — antes de qualquer ação, o subagente articula o estado atual e a causa
-  provável de qualquer falha anterior. Nunca repete uma ação idêntica sem hipótese nova.
-- **AÇÃO** — executa exatamente uma ferramenta/comando por iteração, alinhado ao pensamento
-  que a precedeu.
-- **OBSERVAÇÃO** — lê o resultado bruto retornado (saída de comando, erro, dado) antes de
-  concluir qualquer coisa sobre ele.
-- **VALIDAÇÃO** — compara a observação contra o Critério de Sucesso/Parada, de forma
-  explícita. Só avança para o relatório final quando a comparação é positiva.
+- **PENSAMENTO** — articula o estado e a causa da falha anterior. Nunca
+  repete ação idêntica sem hipótese nova.
+- **AÇÃO** — uma ferramenta por iteração. Em impl, a primeira ação é
+  emitir `## /plan`.
+- **OBSERVAÇÃO** — lê o resultado bruto antes de concluir.
+- **VALIDAÇÃO** — compara contra o `done_when` de cada `/goal` colado.
 
-## Trava de segurança — máximo 5 iterações
+## Trava de segurança
 
-Nenhuma subtarefa pode iterar indefinidamente. Ao atingir a 5ª tentativa sem satisfazer o
-Critério de Sucesso, o subagente **para** e monta um relatório de falha (não um relatório de
-sucesso disfarçado) contendo:
+Impl: 12 iterações por task. Investigação/debug: 5. Ao limite sem `/goal`
+verde, o subagente **para** e monta relatório de **falha**:
 
-1. **Motivo do erro** — a causa-raiz mais provável, com evidência.
-2. **O que foi tentado** — todas as iterações, resumidas em ordem (não o rastro bruto —
-   isso fica isolado no subagente, ver `subagent-handoff.md`).
-3. **Estado final** — em que ponto exato o sistema/código/dado ficou.
+1. **Motivo** — causa-raiz com evidência.
+2. **O que foi tentado** — iterações em ordem.
+3. **Estado final** — o que o código/dado ficou.
+4. **`/goal` ainda vermelhos** — ids.
 
-Esse relatório de falha segue o mesmo template de retorno de `subagent-handoff.md`
-(`## O que foi feito` / `## Evidências / Resultados` / `## Próximos Passos`), com os
-"Próximos Passos" apontando a decisão que cabe ao agente principal (ex.: revisar a
-abordagem, escalar para o operador humano, ajustar o Objetivo Final).
+O relatório segue `subagent-handoff.md`. O orquestrador **respawna** o
+mesmo expert com este relatório + os mesmos `/goal`. Só o humano cancela
+um `/goal`.
 
-## Critério de Parada é lógico e binário
+## Critério de Parada é o /goal
 
-O Critério de Sucesso/Parada usado na etapa de VALIDAÇÃO nunca é subjetivo ou aberto
-("tente até conseguir", "até ficar bom"). Ele é sempre uma condição verificável
-mecanicamente — por exemplo: "o JSON de resposta tem as chaves `data`, `valor` e `status`,
-e nenhuma delas é nula". Um critério que não pode ser respondido com sim/não não é um
-critério válido para este loop — volte para `success-criteria.md` e reescreva-o antes de
-despachar o subagente.
+A VALIDAÇÃO compara contra o `done_when` colado. "Tente até ficar bom"
+não é critério. Sem `/goal` binário, volte a `goals.md` antes de
+despachar.

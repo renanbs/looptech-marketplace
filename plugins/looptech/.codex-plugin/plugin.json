@@ -1,6 +1,6 @@
 {
   "name": "looptech",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Agnostic dev workflow orchestrator + named expert agents (go/python/react/vue/pwa/web/database/security) + guided init.",
   "author": {
     "name": "LoopTech",
@@ -31,10 +31,9 @@
   "interface": {
     "displayName": "LoopTech",
     "shortDescription": "Agnostic engineering workflow and stack-expert skills",
-    "longDescription": "Orchestrates discover → spec+plan → implement → review → lint/tests → PR, then loads the matching stack-expert skill (Go, Python, React, Vue, PWA, web, database) from each project's Project Profile.",
+    "longDescription": "Orchestrates discover → dual brainstorm → /goals → spec+plan → async impl (/plan per task) → review → security → unit+e2e/Playwright → PR, then loads the matching stack-expert skill from each project's Project Profile.",
     "developerName": "LoopTech",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/LoopMed/looptech-marketplace",
     "defaultPrompt": [
       "Initialize this project with looptech:init",

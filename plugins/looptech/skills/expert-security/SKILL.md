@@ -20,6 +20,8 @@ no handoff quando o diff tocar essa stack.
 
 Contrato de fase: [`../workflow-dev/references/security-review.md`](../workflow-dev/references/security-review.md).
 Método de pentest: [`references/pentest.md`](references/pentest.md).
+Biblioteca opcional (só allowlist defensiva): [`references/cyber-skills-index.md`](references/cyber-skills-index.md).
+Nunca carregue skill ofensiva dessa biblioteca. Nunca clone o repo só para o review.
 
 ---
 
@@ -64,9 +66,12 @@ spawna este mesmo agente no ID `critique` e cola `security-review.md` inteiro.
 3. Regras de segurança do **produto** no Profile (lock, allowlist, scope) — se
    existirem. Sem elas, não invente nome.
 4. Superfície: auth, pagamento, PII, API pública, upload, webhook, admin, secret/env.
+5. Allowlist de `cyber-skills-index.md` (até 3 nomes) **ou** “índice local only”.
 
-Primeira ação do agente: ler `security-review.md` e `references/pentest.md` se o
-handoff não os tiver colado por completo.
+Primeira ação: ler `security-review.md`, `references/pentest.md` e
+`references/cyber-skills-index.md` se o handoff não os tiver colado.
+Se a biblioteca estiver instalada, leia no máximo as 3 skills allowlisted
+casadas com a superfície — só intenção/o que procurar/verificação.
 
 ---
 
@@ -93,6 +98,6 @@ tem: classe, path, prejuízo para a empresa, remédio mínimo (sem exploit).
 
 - Escrever código, exploit, PoC ofensivo ou payload além de citar um padrão inócuo
 - Probe/scan em produção, ou em stage sem OK humano
-- Instalar ferramenta ofensiva
+- Instalar ferramenta ofensiva ou carregar skill da denylist de `cyber-skills-index.md`
 - Declarar SECURE sem evidência
 - Inventar regra de produto (nome de lock, header, role) que não está no Profile

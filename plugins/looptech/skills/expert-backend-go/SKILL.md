@@ -125,24 +125,22 @@ de `looptech:expert-database`.
 | Camada | Tipo de teste | Ferramenta |
 |---|---|---|
 | Lógica pura / domínio | Unit test | `go test` |
-| Repositório (acesso a dados) | Integração | testcontainers (container real do banco) |
-| Endpoint de API | Integração | servidor HTTP real + banco de teste |
+| Use case / API | Unitário da matriz (abaixo) | `go test` table-driven |
+| Repositório | Integração | testcontainers |
+| Cada `/goal` de produto da API | E2E HTTP | servidor + banco de teste |
 
-- **Unit tests** cobrem regra de negócio isolada do domínio/aplicação — sem I/O, sem banco,
-  dependências externas mockadas via as interfaces (`ports`) da camada de arquitetura.
-- **Testes de integração** (`testcontainers`) sobem um container real do banco por execução
-  de suíte (não um container por teste) e rodam as migrations uma vez; cada teste limpa seu
-  próprio dado (`t.Cleanup`). Todo repositório novo precisa de arquivo de integração cobrindo
-  seus métodos públicos: write→read roundtrip, campo nullable escaneando como `nil`/inválido
-  sem erro, campo não-nulo correto após roundtrip, comportamento de update, e caminho
-  not-found retornando `nil, nil` (não um erro).
-- **Injection tests** — todo método de repositório que aceita `string`/`*string` vindo de
-  fora da camada de serviço precisa de teste de injeção de SQL. Rode uma lista padrão de
-  payloads (`' OR '1'='1`, `'; DROP TABLE x; --`, `' UNION SELECT ...`, `' OR SLEEP(5) --`,
-  etc. — evite payload com byte nulo, muitos bancos rejeitam como UTF-8 inválido). Para
-  método de **busca**: o payload não deve casar nenhuma linha e não deve gerar erro de SQL.
-  Para método de **escrita**: o payload deve ser armazenado e recuperado **literalmente**
-  (prova de que foi tratado como dado, não como comando).
+- **Unit** — regra de negócio isolada, ports mockados.
+- **Matriz de API obrigatória** para endpoint/use case novo ou alterado
+  (omite um caso só com justificativa no `## /plan`): feliz; validação de
+  cada campo; 401; 404 de outro tenant (não 403 que vaza); not-found;
+  conflito/idempotência; fronteira; corrida se dinheiro/estado. Ver
+  `workflow-dev/references/verification.md`.
+- **Integração** — um container por suíte, write→read, nullable, not-found.
+- **Injection** — todo `string`/`*string` externo: busca não casa linha e
+  não erra SQL; escrita persiste o payload literal.
+- **E2E** — um teste HTTP por `/goal` de produto da API. Skip no caminho
+  do `/goal` = vermelho.
+- Primeira ação de impl: `## /plan`.
 
 ---
 
@@ -216,7 +214,7 @@ allowlist de CORS, etc.) ficam no Project Profile do projeto, não nesta skill.
 - [ ] Todo acesso a recurso verifica ownership (não só autenticação)
 - [ ] Mutação financeira serializada por lock de banco, leitura+escrita na mesma transação
 - [ ] Lint limpo na forma only-new-issues (comando exato do Project Profile)
-- [ ] Testes unitários e de integração passam
+- [ ] Testes unitários, matriz de API e E2E de cada `/goal` de produto passam, sem skip
 
 ## Red flags
 
