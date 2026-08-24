@@ -166,10 +166,13 @@ inexistente é bem-vindo: marca lacuna, não é erro.
 ## Formato canônico de nome
 
 Documento de planejamento: **`<Tipo> - <Título da feature>`**, `<Tipo>` ∈
-`Spec` · `Design` · `Tasks` · `Plan`.
+`Brainstorm` · `Goals` · `Spec` · `Design` · `Tasks` · `Plan`.
 
 ```
 70-Specs/<feature>/
+├── Brainstorm - <Título da feature> (produto).md
+├── Brainstorm - <Título da feature> (codigo).md
+├── Goals - <Título da feature>.md
 ├── Spec - <Título da feature>.md
 ├── Design - <Título da feature>.md
 ├── Tasks - <Título da feature>.md
@@ -284,5 +287,5 @@ obsidian vault="<V>" read path="$P" | head -3      # confirma que existe
 - Gravar valor de segredo sem autorização explícita **daquela tarefa**
 - Afirmar que houve vazamento sem rodar `sync:status`
 - Fechar a tarefa sem a linha no `90-Log/`
-- Usar `spec.md`/`tasks.md`/`design.md` em vez de `<Tipo> - <Título da feature>`
+- Usar `spec.md`/`tasks.md`/`design.md`/`goals.md` em vez de `<Tipo> - <Título da feature>`
 - Inventar nome de vault, produto ou pasta que não está no bloco `memory:`

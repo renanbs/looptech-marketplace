@@ -1,10 +1,10 @@
 # Lanes (S/M/L) e o Delegation Mandate
 
-O `workflow-dev` mantém o esqueleto de fases — discover → brainstorm → spec+plan → env →
-impl → review de correção → review de segurança → lint/tests → PR, com worktrees e
-pipeline de review — mas **zero paths/comandos/slugs de modelo hardcoded**: tudo resolvido
-via `project-profile.md` e `agent-roles.md`. Este documento cobre o sizing por lane e a
-regra dura que governa quem executa cada tipo de ação.
+O `workflow-dev` mantém o esqueleto — discover → dual brainstorm → `/goals` →
+spec+plan → env → `/plan` por task → impl async → review → security →
+testes → PR — mas **zero** paths/comandos/slugs hardcoded: tudo via
+`project-profile.md` e `agent-roles.md`. Este documento cobre o sizing
+por lane e quem executa cada ação.
 
 ## Fase 0 — Resolver Project Profile
 
@@ -63,26 +63,23 @@ O tamanho da lane define a **ceremônia** (quanto planejamento formal precede a 
 ### Lane S — mudança pequena e localizada
 Poucos arquivos, sem cruzar sub-projeto, sem decisão de arquitetura em aberto. Mesmo assim:
 
-- **Não existe "orquestrador implementa direto".** A implementação vai para **um subagente
-  dev**, recebendo o handoff rico do diagnóstico que o orquestrador já levantou (o
-  orquestrador pode ter feito a investigação inicial via subagente de análise, ou já ter
-  contexto suficiente do Project Profile — mas quem escreve o código é o subagente dev).
-- O review de correção **e** o de segurança continuam **obrigatórios** antes do commit,
-  mesmo em lane S (security só pula em diff 100% não-runtime; ver `security-review.md`).
-- Spec/plan podem ser abreviados (modo rápido da skill de planejamento do projeto), mas os
-  critérios de sucesso (`success-criteria.md`) continuam obrigatórios.
+- **Não existe "orquestrador implementa direto".** A implementação vai para **um
+  subagente** expert da stack.
+- Review de correção **e** de segurança obrigatórios (security só pula em diff
+  100% não-runtime).
+- 2a (brainstorm de produto) + pelo menos um `/goal`. Spec/plan podem viver no
+  handoff. `/plan` da task e testes da `verification.md` continuam obrigatórios.
 
 ### Lane M — mudança de escopo médio
-Múltiplos arquivos, possivelmente cruzando sub-projetos ou tocando a camada de dados. Spec e
-plan formais, com critérios de sucesso testáveis por task. Implementação e review seguem o
-mesmo pipeline de subagentes — o volume de handoffs cresce, não a regra de quem implementa.
+Múltiplos arquivos, possivelmente cruzando sub-projetos ou tocando dados. Dual
+brainstorm (2a+2b), `Goals - <Título>`, spec e plan formais, tasks com
+`async`/`depends_on`. Ondas em `tasks[]`. Cada task herda seus `G-`.
 
 ### Lane L — mudança de escopo grande
-Nova feature, mudança estrutural, ou risco alto (financeiro, segurança, dado sensível). Spec
-e plan completos via a skill de planejamento do projeto, com fases explícitas de discover →
-brainstorm → spec+plan → env → impl → review → lint/tests → PR. Cada task herda seu próprio
-critério de "Done when". Pipeline de review roda em cada diff antes do commit correspondente,
-não só no final.
+Nova feature, mudança estrutural, ou risco alto (financeiro, segurança, dado
+sensível). Pipeline completo: discover → 2a+2b (UX experts se houver UI) →
+`/goals` → spec+plan → env → ondas de impl com `/plan` por task → review+security
+por diff → gate de testes → PR. Feature 100% = todos os `/goal` verdes.
 
 ## Loop de ajuste pós-review
 
@@ -95,8 +92,9 @@ Quando o `review` devolve `CHANGES-REQUESTED` **ou** o `security` devolve `ISSUE
 O orquestrador **nunca** aplica o fix pós-review ele mesmo — mesmo que o ajuste pareça
 trivial, a menos que caia dentro da exceção de ≤ 100 caracteres.
 
-## Planejamento permanece desacoplado
+## Planejamento do plugin
 
-A skill de spec/plan usada nas lanes M/L não é embutida no `workflow-dev` — o orquestrador
-referencia a skill de planejamento que o projeto declarar (via Project Profile em
-`CLAUDE.md` / `AGENTS.md`), sem duplicar seu conteúdo aqui.
+O contrato de brainstorm, `/goal`, `/plan` por task, async e verificação vive
+nas referências deste plugin. Se o projeto declarar uma skill extra de
+planejamento no Profile, o `plan` ainda assim **tem** de emitir `Goals -` e
+tasks com `async`/`depends_on` — senão a Fase 6 não abre.

@@ -177,29 +177,24 @@ concreto do tenant — `company`, `org`, `account` — vem do domínio do produt
 
 | Camada | Tipo | Ferramenta |
 |---|---|---|
-| Lógica pura / domínio + use cases | Unit | `pytest` (`asyncio_mode="auto"`), ports mockados |
-| Repositório (acesso a dados) | Integração | `testcontainers[postgres]` — Postgres real |
-| Endpoint de API | E2E | `TestClient` / cliente HTTP async real |
-| Integração HTTP externa (httpx) | Unit/integração | `respx` (intercepta httpx) |
+| Domínio + use cases | Unit | `pytest`, ports mockados (subclasse da ABC) |
+| Use case / API | Matriz de casos | `pytest` parametrizado |
+| Repositório | Integração | testcontainers + `alembic upgrade head` |
+| Cada `/goal` de produto da API | E2E | `TestClient` / cliente HTTP async |
+| HTTP externo | Unit/integração | `respx` |
 
-- **Unit** cobre regra de negócio isolada — **sem DB, sem rede**, dependências externas mockadas
-  via as **ports** (`ABC`). Um mock de port é uma subclasse in-memory da `ABC`, não um `MagicMock`
-  solto — assim o type checker e a assinatura garantem que o mock respeita o contrato. Cada teste
-  roda em sub-100ms.
-- **Integração** sobe **um container real do banco por arquivo de suíte** (fixture module-scoped),
-  roda as migrations uma vez (`alembic upgrade head` — não `Base.metadata.create_all()`, o ponto é
-  validar as migrations reais), e cada teste isola seu dado (sessão function-scoped com `rollback`,
-  ou `seed` que commita e limpa). Todo repositório novo precisa de integração cobrindo seus métodos
-  públicos: write→read roundtrip, campo nullable escaneando como `None` sem erro, comportamento de
-  update, e caminho not-found retornando `None`.
-- **Injection tests** — todo método de repositório que aceita `str` vindo de fora da camada de
-  serviço precisa de teste de injeção de SQL. Rode payloads padrão (`' OR '1'='1`,
-  `'; DROP TABLE x; --`, `x' OR tenant_id IS NOT NULL --`, `' UNION SELECT ...`). Para método de
-  **busca**: o payload não casa nenhuma linha e não gera erro de SQL nem vaza linha de outro tenant.
-  Para método de **escrita**: o payload é armazenado e recuperado **literalmente** (prova de que
-  foi tratado como dado, não como comando).
-- Marque as camadas (`@pytest.mark.unit/integration/e2e`) e rode com `--strict-markers`. Testes de
-  domínio/use case **não** tocam Alembic nem DB.
+- **Unit** — sem DB, sem rede. Mock = subclasse da `ABC`, não MagicMock solto.
+- **Matriz de API obrigatória** (omite um caso só no `## /plan`): feliz;
+  validação de cada campo; 401; 404 de outro tenant; not-found;
+  conflito/idempotência; fronteira; corrida se dinheiro/estado. Ver
+  `workflow-dev/references/verification.md`.
+- **Integração** — um container por arquivo de suíte; write→read, nullable,
+  not-found.
+- **Injection** — `str` externo: busca não casa linha e não erra SQL; escrita
+  persiste o payload literal.
+- **E2E** — um teste HTTP por `/goal` de produto. Skip no caminho = vermelho.
+- Primeira ação de impl: `## /plan`.
+- Marque `@pytest.mark.unit/integration/e2e` com `--strict-markers`.
 
 ---
 
@@ -284,11 +279,11 @@ rate-limit) ficam no Project Profile do projeto, não nesta skill.
 - [ ] Coluna/tabela nova: `Model` atualizado **e** importado no agregador **e** migration na mesma PR (execução delegada a `expert-database`)
 - [ ] Entrada tenant-facing usa método tenant-safe (`*_for_<tenant>`); método RAW só com guarda de ownership na linha seguinte
 - [ ] Unit test do use case roda sem DB e sem HTTP (ports mockados como subclasse da `ABC`)
-- [ ] Integração cobre write→read roundtrip, nullable, not-found — com `testcontainers` + `alembic upgrade head`
+- [ ] Integração cobre write→read, nullable, not-found — testcontainers + `alembic upgrade head`
 - [ ] Injection test cobre todo parâmetro `str` externo de repositório
-- [ ] Mutação financeira/crítica serializada por lock de banco, na mesma transação (atenção a READ COMMITTED + identity map)
+- [ ] Matriz de API + E2E de cada `/goal` de produto passam, sem skip
+- [ ] Mutação financeira/crítica serializada por lock de banco, na mesma transação
 - [ ] `ruff check` + `ruff format` + `mypy` strict verdes; sem `# type: ignore` sem justificativa
-- [ ] Suíte de testes verde (comando exato do Project Profile)
 
 ## Red flags
 
@@ -296,10 +291,10 @@ rate-limit) ficam no Project Profile do projeto, não nesta skill.
 - SQLAlchemy/Pydantic/`Request`/`Depends` dentro de `domain/` ou `application/`
 - Valor de runtime interpolado (f-string/`+`) dentro de string SQL; `text(f"...")`
 - `SELECT *` em qualquer repositório
-- Repositório dando `commit()` no meio de um fluxo (fronteira de commit deveria ser única)
-- Método de repositório novo sem teste de integração; parâmetro `str` externo sem injection test
-- Mutação financeira fora de bloco de lock transacional, ou lock com re-leitura sem `expire_all()`
-- Método RAW (sem filtro de tenant) chamado em router/use case tenant-facing sem guarda de ownership
-- Chamada síncrona bloqueante (`time.sleep`, `requests`, driver sync) dentro de handler async
-- Use case importando implementação concreta de infra em vez da `ABC` (port)
+- Repositório dando `commit()` no meio de um fluxo
+- Método de repositório novo sem integração; `str` externo sem injection test
+- Mutação financeira fora de lock, ou lock sem `expire_all()` na re-leitura
+- Método RAW em fluxo tenant-facing sem guarda de ownership
+- Chamada síncrona bloqueante dentro de handler async
+- Use case importando implementação concreta em vez da `ABC`
 - `# type: ignore` / `Any` sem justificativa; regra de ruff rebaixada para "passar"

@@ -1,10 +1,11 @@
 # Security review — falhas que podem prejudicar a empresa
 
 Etapa obrigatória **antes de cada commit**, no mesmo diff do review de correção.
-Readonly: o agente nomeado **`expert-security`** **não escreve código**. Achado vira
-`ISSUES-FOUND` e volta para o agente expert da stack. Inclui pentest defensivo
-(`skills/expert-security/references/pentest.md`): superfície, threat model, tabela
-estática, scanners do repo. Sem exploit, sem probe em produção.
+Readonly: o agente **`expert-security`** **não escreve código**. Achado vira
+`ISSUES-FOUND` e volta para o expert da stack. Inclui pentest defensivo
+(`skills/expert-security/references/pentest.md`) e, se presente, só skills
+**allowlisted** de `cyber-skills-index.md` (Anthropic Cybersecurity Skills).
+Sem exploit, sem probe em produção, sem skill ofensiva.
 
 O alvo não é estilo. É dano: perda de dinheiro, vazamento de dado, takeover de
 conta, fraude, incidente público, ou porta dos fundos em produção.
@@ -31,6 +32,9 @@ Além dos quatro blocos de `subagent-handoff.md`:
    use só os princípios agnósticos abaixo.
 4. Se o papel `security` caiu em `critique` (sem especialista no host),
    cole **esta página inteira** e diga isso no Objetivo Final.
+5. Se a biblioteca Anthropic Cybersecurity Skills estiver instalada, cole
+   no máximo 3 nomes da allowlist de `cyber-skills-index.md` que casem com
+   a superfície. Se não estiver, escreva “índice local only”.
 
 ## O que caçar (agnóstico)
 

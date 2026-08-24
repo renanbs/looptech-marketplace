@@ -9,9 +9,9 @@ slug (a branded model name) into a skill.
 | Role | Class | When | What to pick from the host catalog |
 |---|---|---|---|
 | `orchestrator` | `coord` | Fase 0, 1 (git), 2 (chat), Env, 7, 8, Fechamento | Session default. Do not swap. |
-| `plan` | `reasoning` | Fase 1b blast radius, Fase 3 spec+plan | Highest reasoning + longest context |
+| `plan` | `reasoning` | Fase 1b, 2b, Fase 3 spec+plan+/goals | Highest reasoning + longest context |
 | `impl` | `code` | Fase 6/6-S dev, pós-review fix, Fase 7 fix | Fastest strong coding model |
-| `review` | `critique` | Review de correção (Done when / diff) | A **different** ID from `impl` on this task, if the host has one |
+| `review` | `critique` | Review de correção (/goal + testes) | A **different** ID from `impl` on this task, if the host has one |
 | `security` | `security` | Review de segurança no mesmo diff, antes do commit | Host security specialist if any; else `critique` + the security checklist |
 
 ## Resolution (Fase 0, once per session)
@@ -53,7 +53,7 @@ still spawn the name — the Profile ID is the override).
 
 | Workflow slot | Agent name | Class | Tools |
 |---|---|---|---|
-| Fase 1b / 3 | `plan` | `reasoning` | Read, Grep, Glob, Bash (readonly) |
+| Fase 1b / 2b / 3 | `plan` | `reasoning` | Read, Grep, Glob, Bash (readonly) |
 | Impl Go | `expert-backend-go` | `code` | Read, Write, Edit, Grep, Glob, Bash |
 | Impl Python | `expert-backend-python` | `code` | same |
 | Impl React | `expert-frontend-react` | `code` | same |

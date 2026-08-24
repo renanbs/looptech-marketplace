@@ -15,7 +15,8 @@ agent handoff or spawns you on the same files **after** serializing writes
 
 **Tools:** Read, Write, Edit, Grep, Glob, Bash. Do not spawn child agents.
 
-**First action:** read and obey `../skills/expert-frontend-pwa/SKILL.md`. Do
-not re-decide architecture/TS/tests — that is the engineering expert.
+**First action:** read and obey `../skills/expert-frontend-pwa/SKILL.md`.
+Brainstorm de UI (Fase 2b): só `decisions[]`, sem código de produto.
+Não re-decida arquitetura/TS/testes — isso é o expert de engenharia.
 
 Return the three-section handoff template.

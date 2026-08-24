@@ -6,16 +6,17 @@ despachado sem seguir este protocolo.
 ## Princípio
 
 O orquestrador nunca despacha um subagente "para descobrir". O orquestrador já sabe o
-suficiente do Project Profile, da skill expert carregada e da investigação prévia para
-**colar** esse conhecimento diretamente no prompt do subagente. O subagente **recebe →
-planeja → executa**; ele não gasta iterações remontando contexto que o orquestrador já tinha.
+suficiente do Project Profile, da skill expert, do `/goal` e da investigação prévia para
+**colar** esse conhecimento no prompt. O subagente **recebe → emite `/plan` → executa**;
+ele não gasta iterações remontando contexto que o orquestrador já tinha.
 
 ## Entrada — o orquestrador SEMPRE cola os quatro blocos
 
-### 1. Objetivo Final
-O que construir/investigar/corrigir, incluindo a **validação de negócio / critérios de
-sucesso** — a condição binária de "pronto" (ver `success-criteria.md`). Nunca despachar um
-subagente com um objetivo vago ("melhora isso aí") sem a condição de parada explícita.
+### 1. Objetivo Final = `/goal`
+Cole o(s) `/goal` da task (`id`, `kind`, `statement`, `done_when`, `evidence`) de
+`goals.md` — texto, não ponteiro. Isso é a condição de parada. Nunca despachar com
+"melhora isso aí". `impl` ainda não autorizado a editar: primeira ação é o
+`## /plan` de `plan-before-impl.md`.
 
 ### 2. Estado Atual
 Referências **exatas** — arquivos, dados, trechos de código **colados no prompt**, não
@@ -44,25 +45,19 @@ inteiro.
 
 ## Granularidade e fan-out — 1 subagente por unidade independente
 
-Cada subagente recebe **somente o que é da sua responsabilidade**, com escopo definido na
-etapa de spec/plan. A decomposição correta das tasks é o que torna o handoff enxuto — uma
-task bem-scopada cabe inteira, inline, no prompt.
+Cada subagente recebe **somente o que é da sua responsabilidade**. A decomposição
+está em `Tasks - <Título>` (`async`, `depends_on`, `goals`). Protocolo de ondas:
+`async-dispatch.md`.
 
-- **Delegar é o padrão.** Sempre prefira despachar um subagente a executar você mesmo. O
-  orquestrador só age direto na exceção trivial definida no Delegation Mandate — na dúvida,
-  delegue.
-- **Uma unidade independente = um subagente, em paralelo por padrão.** Arquivos/tasks sem
-  dependência direta (não compartilham arquivo nem estado) são despachados **ao mesmo tempo**,
-  um subagente por unidade — não serialize por hábito.
-- **Colisão ⇒ serialize.** Quando duas subtasks colidem (mesmo arquivo, mesmo recurso, ou uma
-  depende do resultado da outra), **nunca** rode as duas em paralelo: despache a primeira,
-  **espere concluir**, e só então um novo subagente ataca a próxima. Duas escritas concorrentes
-  no mesmo arquivo corrompem o resultado.
-- **Nunca empacote N arquivos independentes num único subagente** — isso serializa dentro
-  dele o que deveria correr em paralelo (ex.: 5 arquivos editados em sequência por 1 agente,
-  quando 5 agentes fariam em paralelo no tempo de 1).
-- **Só agrupe no mesmo subagente** tasks genuinamente acopladas (mesmo arquivo, ou uma
-  depende do resultado da outra).
+- **Delegar é o padrão.** Na dúvida, delegue.
+- **Uma unidade independente = um subagente, na mesma onda.** Despache a onda
+  numa única chamada `tasks[]`. Uma task por vez com `async: true` é red flag.
+- **Colisão ⇒ serialize.** Mesmo arquivo, mesmo recurso, ou `depends_on`
+  não vazio: espere a anterior. Duas escritas no mesmo arquivo corrompem
+  o resultado.
+- **Nunca empacote N arquivos independentes num único subagente** — isso
+  serializa o que deveria ser uma onda.
+- **Só agrupe no mesmo subagente** tasks genuinamente acopladas.
 - **Tarefas pequenas — respeite a janela do subagente.** Cada subagente tem janela finita (na
   ordem de ~350k tokens). Dimensione cada subtask para caber com folga; se exigir ler/escrever
   muito, **quebre em unidades menores antes de despachar**. Task grande demais estoura o
@@ -92,9 +87,9 @@ janela de contexto sobreviver inteira até o fim.
   recomeçar do zero nem devolver trabalho pela metade.
 - **Onde:** um path de scratch/memória próprio do subagente (não o do orquestrador); o
   subagente cita esse path no retorno para rastreabilidade.
-- **Condição de encerramento:** o subagente só se dá por concluído quando o **critério de
-  sucesso** (ver `success-criteria.md`) é atingido — o checkpoint é a garantia de que uma
-  tarefa longa chega ao fim mesmo cruzando limites de contexto.
+- **Condição de encerramento:** o subagente só se dá por concluído quando
+  cada `/goal` da task está verde (`goals.md`). O checkpoint garante que
+  a tarefa longa chega ao fim mesmo cruzando limite de contexto.
 
 ## Retorno estruturado (obrigatório)
 
@@ -103,10 +98,10 @@ ordem, sem variação de título:
 
 ```markdown
 ## O que foi feito
-<rastro auditável da investigação/execução>
+<rastro auditável; impl inclui o ## /plan emitido>
 
 ## Evidências / Resultados
-<dados brutos ou pedaços de código validados>
+<saída de teste / Playwright / comando do Profile; /goal Gn: verde|vermelho>
 
 ## Próximos Passos
 <o que o agente principal precisa fazer com isso>

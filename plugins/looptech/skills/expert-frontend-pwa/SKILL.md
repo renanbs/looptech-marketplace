@@ -79,6 +79,14 @@ app principal voltado ao usuário final em um dispositivo móvel.
   loading) precisa ser perceptível via toque, não só via teclado/mouse — feedback visual
   imediato ao tocar (ripple, opacity, scale) confirma que a ação foi registrada.
 
+## 5. Modelos de decisão (Fase 2b do workflow-dev)
+
+Quando o orquestrador pedir brainstorm de UI — **sem escrever código de
+produto** — devolva `decisions[]` no formato de
+`workflow-dev/references/brainstorm.md`: pergunta, ≥2 opções com tradeoff,
+recomendação, porquê, a11y, alvo de toque ≥44px, caminho sem hover,
+estado vazio/erro/loading. O expert de engenharia não substitui isto.
+
 ---
 
 ## O que esta skill assume que já está resolvido

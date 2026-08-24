@@ -65,9 +65,9 @@ subprojects:
 vcs: { base: develop, pr_target: develop, prefixes: [feature, fix, hotfix], hotfix_base: main }
 specs_dir: .specs/<feature>/                            # fallback; o bloco memory: abaixo vence
 commands:
-  expert-backend-go:   { test: "<cmd>", lint: "<cmd CI>", build: "<cmd>" }
-  expert-frontend-react:{ test: "<cmd>", lint: "<cmd>", types: "<cmd>", build: "<cmd>" }
-  expert-frontend-vue:  { test: "<cmd>", lint: "<cmd>", types: "<cmd>", build: "<cmd>" }
+  expert-backend-go:   { test: "<cmd>", integ: "<cmd>", e2e: "<cmd>", lint: "<cmd CI>", build: "<cmd>" }
+  expert-frontend-react:{ test: "<cmd>", e2e: "<playwright>", lint: "<cmd>", types: "<cmd>", build: "<cmd>" }
+  expert-frontend-vue:  { test: "<cmd>", e2e: "<playwright>", lint: "<cmd>", types: "<cmd>", build: "<cmd>" }
 database: { connections: { stage: <nome>, prod: <nome> }, dialect: postgres, discovery: { tables: "\\dt", schema: "\\d <t>", indexes: "\\di <t>" }, migrations_table: schema_migrations }
 memory: { vault: <NomeDoVault>, path: <pasta>/, produtos: [<Produto>], specs_dir: 70-Specs/<feature>/, pii: perguntar }
 agents: { <host>: { reasoning: { model: <id> }, code: { model: <id> }, critique: { model: <id> }, security: { model: <id> } } }

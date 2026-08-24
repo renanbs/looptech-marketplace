@@ -2,9 +2,9 @@
 
 Marketplace com **2 plugins** (`looptech`, `memory-graph`) que empacota o fluxo de
 desenvolvimento da LoopTech como um **workflow agnóstico de produto**: orquestração
-de tarefas de dev (spec → plano → implementação → review → PR) e um conjunto de
-**skills expert** por stack/eixo, reutilizáveis em qualquer projeto — LoopMed, LoopCRM
-ou um projeto futuro X/Y.
+de tarefas de dev (brainstorm → `/goals` → spec/plan → impl async → review → PR)
+e um conjunto de **skills expert** por stack/eixo, reutilizáveis em qualquer
+projeto — LoopMed, LoopCRM ou um projeto futuro X/Y.
 
 O mesmo repositório instala em **Claude Code**, **Codex** e **Cursor**. Cada host lê o
 catálogo dele (`.claude-plugin/`, `.agents/plugins/`, `.cursor-plugin/`); a
@@ -22,15 +22,14 @@ sirva qualquer repositório. Claude Code lê `CLAUDE.md`; Codex e Cursor leem
 Um único plugin, publicado neste marketplace, com **9 skills** expert + `init` e
 **agentes nomeados** em `agents/` (mesmo nome da skill, spawnáveis no host):
 
-1. `looptech:workflow-dev` — o **orquestrador**. Lê o Project Profile do `CLAUDE.md`
-   do projeto, classifica o tamanho da tarefa (lane S/M/L), resolve qual(is) skill(s)
-   expert carregar por sub-projeto tocado, e conduz o ciclo completo
-   discover → brainstorm → spec+plan → implementação (agente expert da stack) →
-   review de correção → review de segurança/pentest (`expert-security`) →
-   lint/testes → PR.
+1. `looptech:workflow-dev` — o **orquestrador**. Lê o Project Profile, classifica a lane (S/M/L), resolve os experts e conduz
+   discover → dual brainstorm (produto + código) → `/goals` → spec+plan →
+   implementação async (cada `impl` começa com `/plan`) → review de correção →
+   review de segurança/pentest defensivo (`expert-security`) → testes
+   (unitário + e2e/Playwright) → PR.
    Atua como **puro orquestrador**: nunca implementa/analisa/ajusta código por conta
-   própria (exceto edição trivial ≤ 100 caracteres) — tudo isso é delegado a subagentes,
-   com handoff rico, loop de autonomia (ReAct) e critérios de sucesso obrigatórios.
+   própria (exceto edição trivial ≤ 100 caracteres). `/goal` é a condição de
+   parada; uma task por vez com fatias independentes é red flag.
 2. `looptech:expert-backend-go` — engenharia Go: arquitetura em camadas/hexagonal,
    desacoplamento por interfaces, disciplina sqlx (query consts, zero `SELECT *`,
    parametrização), pirâmide de testes (unit + integração + injection), lint
@@ -44,13 +43,13 @@ Um único plugin, publicado neste marketplace, com **9 skills** expert + `init` 
    gate `ruff` + `mypy` strict, segurança em princípio (ownership, locks transacionais,
    gating por ambiente).
 4. `looptech:expert-frontend-react` — engenharia React + TypeScript: arquitetura de
-   componentes, hooks testáveis, TypeScript estrito (sem `any`/`@ts-ignore` sem
-   justificativa), testes com vitest + RTL focados em comportamento visível, E2E no
-   golden path, CSP e segurança de cliente.
+   componentes, hooks testáveis, TypeScript estrito, testes com vitest + RTL
+   focados em comportamento visível, E2E Playwright por `/goal` de UI, CSP e
+   segurança de cliente.
 5. `looptech:expert-frontend-vue` — engenharia Vue 3 + TypeScript: SFCs com
-   `<script setup>`, composables testáveis, TypeScript estrito (incl. `ref(null)` tipado),
-   testes com vitest + Vue Testing Library focados em comportamento visível, E2E no
-   golden path, CSP e segurança de cliente.
+   `<script setup>`, composables testáveis, TypeScript estrito, testes com
+   vitest + Vue Testing Library, E2E Playwright por `/goal` de UI, CSP e
+   segurança de cliente.
 6. `looptech:expert-frontend-pwa` — eixo de **UX** orientado a mobile-first: layout
    mobile-first, alvos de toque ≥ 44px, densidade e ergonomia de polegar, performance
    percebida, comportamento offline-tolerante.
@@ -62,8 +61,9 @@ Um único plugin, publicado neste marketplace, com **9 skills** expert + `init` 
    (preflight de conexão → discovery live de tabelas/schemas/indexes → query sargável
    → execução), gate de produção e migrations por existência (não por version).
 9. `looptech:expert-security` — review de segurança e pentest **defensivo** do diff
-   (superfície, threat model, tabela de dano à empresa, scanners do repo). Readonly.
-   Sem exploit, sem probe em produção.
+   (superfície, threat model, tabela de dano, scanners do repo, allowlist
+   defensiva da biblioteca Anthropic Cybersecurity Skills se instalada).
+   Readonly. Sem exploit, sem probe em produção, sem skill ofensiva.
 
 ### Os dois eixos do frontend
 
@@ -189,10 +189,12 @@ commands:
   expert-backend-go:
     test:  "go test ./..."
     integ: "go test -tags integration ./internal/infra/database/repositories/... -timeout 300s"
+    e2e:   "go test -tags e2e ./internal/http/... -timeout 300s"
     lint:  "golangci-lint run --new-from-rev=origin/develop ./..."   # forma do CI; DEVE imprimir '0 issues'
     build: "go build ./..."
   expert-frontend-react:
     test:  "npm run test"
+    e2e:   "npx playwright test"
     lint:  "npm run lint"
     types: "npx tsc --noEmit"
     build: "npm run build"
@@ -256,8 +258,8 @@ plugins/
     skills/
 ```
 
-Versões dos três manifests de cada plugin precisam andar juntas (`looptech` 0.6.1,
-`memory-graph` 0.3.2).
+Versões dos três manifests de cada plugin precisam andar juntas (`looptech` 0.7.0,
+`memory-graph` 0.3.3).
 
 ## Extensibilidade
 

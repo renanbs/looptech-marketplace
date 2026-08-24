@@ -1,6 +1,6 @@
 ---
 name: expert-frontend-react
-description: Disciplina de ENGENHARIA frontend em React + TypeScript (não trata de UX/layout — isso é expert-frontend-pwa/web) — arquitetura de componentes e desacoplamento, hooks isolados e testáveis, TypeScript strict (sem any/@ts-ignore sem justificativa), testes vitest + Testing Library focados em comportamento visível (ByRole/ByLabelText), E2E no golden path, CSP declarada no config de deploy, sem segredos no client, backend como autoridade de authz. Carregue ao trabalhar em qualquer sub-projeto cuja stack seja React (package.json com react). Despachada pelo workflow-dev junto com a skill de UX da área; comandos concretos vêm do Project Profile.
+description: Disciplina de ENGENHARIA frontend em React + TypeScript (não trata de UX/layout — isso é expert-frontend-pwa/web) — arquitetura de componentes e desacoplamento, hooks isolados e testáveis, TypeScript strict (sem any/@ts-ignore sem justificativa), testes vitest + Testing Library focados em comportamento visível (ByRole/ByLabelText), E2E Playwright cobrindo cada /goal de produto de UI, CSP declarada no config de deploy, sem segredos no client, backend como autoridade de authz. Carregue ao trabalhar em qualquer sub-projeto cuja stack seja React (package.json com react). Despachada pelo workflow-dev junto com a skill de UX da área; comandos concretos vêm do Project Profile.
 ---
 
 # expert-frontend-react — Engenharia React + TypeScript
@@ -48,18 +48,19 @@ fatos.
 |--------|----------------|------------|
 | Lógica pura / hooks | Unit test | vitest |
 | Componentes React | Component test | vitest + Testing Library |
-| Fluxos de usuário (golden path) | E2E | Playwright (ou equivalente do projeto) |
+| Cada `/goal` de produto de UI | E2E | [Playwright](https://playwright.dev) |
 
-- **Teste comportamento visível, não implementação**: asserts sobre o que o usuário vê/faz,
-  nunca sobre estado interno ou detalhes de renderização.
-- **Queries por acessibilidade primeiro**: prefira `ByRole` / `ByLabelText` / `ByText` a
-  `ByTestId` — um seletor `data-testid` é o último recurso, não o padrão.
-- **Mock no boundary de rede** (ex.: MSW), nunca mockando o componente ou a camada de dados
-  por dentro — o teste deve validar o componente real conversando com uma rede simulada.
-- **E2E cobre o golden path** de todo fluxo novo voltado ao usuário — não é para cobrir
-  edge cases, isso fica para unit/component.
-- Comandos concretos (`test`, `e2e`, `lint`, `types`, `build`) vêm do bloco `commands` do
-  Project Profile — nunca hardcode aqui.
+- **Teste comportamento visível, não implementação.**
+- **Queries por acessibilidade primeiro:** `ByRole` / `ByLabelText` / `ByText`.
+  `data-testid` é último recurso.
+- **Mock no boundary de rede** (MSW), nunca o componente por dentro.
+- **Playwright é obrigatório** para fluxo de UI novo. Comando em
+  `commands.<stack>.e2e` do Profile. Não abra Cypress/equivalente em
+  feature nova. Sem Playwright no repo: esta task o adiciona.
+- Cada `/goal` de produto de UI tem um spec que o prova. Skip no caminho
+  do `/goal` = `/goal` vermelho. Edge cases ficam no unit/component.
+- Primeira ação de impl: `## /plan` (workflow-dev `plan-before-impl.md`).
+- Comandos concretos vêm do Profile.
 
 ---
 
@@ -90,7 +91,7 @@ e o arquivo de config de deploy exato vêm do Project Profile do projeto.
 - [ ] Sem cast `any` sem comentário explicando o motivo
 - [ ] Sem `@ts-ignore` sem referência a ticket de follow-up
 - [ ] Testes unit/component passam (comando do Project Profile)
-- [ ] Testes E2E do golden path passam (comando do Project Profile)
+- [ ] Playwright de cada `/goal` de UI passa (comando `e2e` do Profile), sem skip
 - [ ] Lint limpo (comando do Project Profile)
 - [ ] Typecheck limpo (comando do Project Profile)
 - [ ] Build de produção sucede (comando do Project Profile)
@@ -108,6 +109,7 @@ e o arquivo de config de deploy exato vêm do Project Profile do projeto.
 - Hook com lógica de estado/efeito não extraível/testável isoladamente do componente.
 - Teste que quebra ao refatorar detalhe interno sem mudar comportamento visível (teste
   acoplado a implementação, não a comportamento).
+- Fluxo de UI novo sem spec Playwright, ou `/goal` de UI fechado com skip.
 - Build de produção falhando ou lint com erros commitados antes de abrir PR.
 
 ---
