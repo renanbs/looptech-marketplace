@@ -35,12 +35,16 @@ Optional. Without it the workflow still runs, using steps 4–6, and warns.
 
 ```yaml
 agents:
-  <host>:                    # cursor | claude | codex | … — only hosts you use
+  <host>:                    # cursor | claude | codex | omp | … — only hosts you use
     reasoning: { model: <id do catálogo> }
     code:      { model: <id do catálogo> }
     critique:  { model: <id do catálogo> }   # omit → another code id, else reasoning readonly
     security:  { model: <id do catálogo> }   # omit → critique + checklist
 ```
+
+On **omp**, this block is also what `looptech:omp-setup` reads to populate
+its own per-agent override map — see `host-compat.md` for why that extra
+step exists there and nowhere else.
 
 `<id do catálogo>` is whatever the host lists **today**. The plugin never
 suggests a default brand. `init` asks the human to map the catalog.

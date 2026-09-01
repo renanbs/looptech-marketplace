@@ -6,15 +6,15 @@ de tarefas de dev (brainstorm → `/goals` → spec/plan → impl async → revi
 e um conjunto de **skills expert** por stack/eixo, reutilizáveis em qualquer
 projeto — LoopMed, LoopCRM ou um projeto futuro X/Y.
 
-O mesmo repositório instala em **Claude Code**, **Codex** e **Cursor**. Cada host lê o
-catálogo dele (`.claude-plugin/`, `.agents/plugins/`, `.cursor-plugin/`); a
-implementação em `plugins/` é única.
+O mesmo repositório instala em **Claude Code**, **Codex**, **Cursor** e **omp**. Cada
+host lê o catálogo dele (`.claude-plugin/`, `.agents/plugins/`, `.cursor-plugin/`,
+`.omp-plugin/`); a implementação em `plugins/` é única.
 
 A regra de ouro: **o plugin carrega processo e disciplina transferível; o Project
 Profile de cada projeto (`CLAUDE.md` e `AGENTS.md`) carrega os fatos concretos**
 (paths, comandos, branches, conexões de banco). Nenhuma skill deste plugin cita nomes
 de produto, paths concretos ou nomes de conexão — isso garante que o mesmo plugin
-sirva qualquer repositório. Claude Code lê `CLAUDE.md`; Codex e Cursor leem
+sirva qualquer repositório. Claude Code lê `CLAUDE.md`; Codex, Cursor e omp leem
 `AGENTS.md`. O `looptech:init` grava o Profile nos dois.
 
 ## O que é o plugin `looptech`
@@ -133,6 +133,30 @@ ln -s /caminho/para/looptech-marketplace/plugins/memory-graph ~/.cursor/plugins/
 Reinicie o Cursor (Developer: Reload Window). Skills e commands (`/init`,
 `/workflow-dev`) aparecem em Customize.
 
+### omp
+
+```
+/marketplace add https://github.com/LoopMed/looptech-marketplace
+/marketplace install --scope project looptech@looptech
+/marketplace install --scope project memory-graph@looptech
+```
+
+(ou os equivalentes de shell: `omp plugin marketplace add ...` e
+`omp plugin install name@looptech`.) O omp lê `.omp-plugin/marketplace.json`
+nativamente. Depois de instalar, rode `/reload-plugins` ou reinicie a sessão —
+a instalação por si só não recarrega uma sessão já aberta.
+
+> ⚠️ **Passo extra obrigatório no omp, e só no omp:** os 10 agentes do plugin
+> (`plan`, `review`, `expert-security`, `expert-backend-*`, `expert-frontend-*`,
+> `expert-database`) declaram `model: inherit` no frontmatter. Em Claude Code,
+> Cursor e Codex isso significa "use o mesmo modelo da conversa principal" —
+> mas o omp **não** implementa essa convenção para subagentes customizados, e
+> tentar usar um desses agentes falha com `Error: No model selected` até você
+> configurar um override. Rode `looptech:omp-setup` uma vez logo depois de
+> instalar (ou sempre que trocar de provider/modelo) — ele grava o mapa
+> `task.agentModelOverrides` do próprio omp via `omp config set`, sem tocar no
+> frontmatter compartilhado com os outros hosts. Veja `commands/omp-setup.md`.
+
 ### Depois de instalar — rode o `init`
 
 **Você não precisa decorar o que configurar.** Assim que instalar, rode:
@@ -142,6 +166,7 @@ Reinicie o Cursor (Developer: Reload Window). Skills e commands (`/init`,
 | Claude Code | `/looptech:init` |
 | Codex | `$init` |
 | Cursor | `/init` |
+| omp | `/skill:init` (e, antes de qualquer spawn, `looptech:omp-setup` — ver aviso acima) |
 
 A skill `looptech:init` faz o setup guiado do zero ao pronto — detecta os sub-projetos e
 gera o **Project Profile** no `CLAUDE.md` **e** no `AGENTS.md`, configura a conexão de
@@ -164,7 +189,7 @@ Um projeto adota o `looptech:workflow-dev` colando um bloco **Project Profile** 
 concretos que o plugin precisa para operar: sub-projetos e suas stacks, o eixo de UX por
 área, convenções de VCS, diretório de specs, comandos exatos por stack (espelhando o CI),
 o mapa de papéis de agente (se houver) e, se houver banco, as conexões e o dialeto.
-Claude Code lê `CLAUDE.md`; Codex e Cursor leem `AGENTS.md` — os dois arquivos precisam
+Claude Code lê `CLAUDE.md`; Codex, Cursor e omp leem `AGENTS.md` — os dois arquivos precisam
 do mesmo bloco.
 
 Template genérico (adapte os valores de exemplo ao seu projeto):
@@ -207,7 +232,7 @@ ci_gotchas: |
   - lint = only-new-issues; linha modificada conta como nova
   - CI não roda integration; rodar local se tocar repo layer
 agents:                                 # opcional; IDs vêm do catálogo do host
-  <host>:                               # cursor | claude | codex
+  <host>:                               # cursor | claude | codex | omp
     reasoning: { model: <id> }          # spec/plan/blast radius
     code:      { model: <id> }          # implementação
     critique:  { model: <id> }          # review de correção (outro ID que não o code)
@@ -240,12 +265,13 @@ Um único `plugins/` e um catálogo por host — o mesmo padrão do marketplace 
 .claude-plugin/marketplace.json     # Claude Code
 .agents/plugins/marketplace.json    # Codex
 .cursor-plugin/marketplace.json     # Cursor
+.omp-plugin/marketplace.json        # omp (opcional — omp cai no .claude-plugin/ como fallback)
 plugins/
   looptech/
     .claude-plugin/plugin.json
     .codex-plugin/plugin.json
     .cursor-plugin/plugin.json
-    commands/                       # slash commands do Cursor (/init, /workflow-dev)
+    commands/                       # slash commands (Cursor: /init, /workflow-dev; omp: /skill:omp-setup)
     agents/                         # agentes nomeados (experts + plan + review + security)
     skills/
   memory-graph/
@@ -258,8 +284,10 @@ plugins/
     skills/
 ```
 
-Versões dos três manifests de cada plugin precisam andar juntas (`looptech` 0.7.0,
-`memory-graph` 0.3.3).
+Versões dos manifests de cada plugin precisam andar juntas — `looptech` tem
+quatro (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`, e o catálogo
+raiz `.omp-plugin/marketplace.json`; ele não tem plugin.json próprio, ver
+nota acima) — atualmente `looptech` 0.8.0, `memory-graph` 0.3.3.
 
 ## Extensibilidade
 
