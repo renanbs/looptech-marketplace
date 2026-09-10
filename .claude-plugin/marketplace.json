@@ -10,11 +10,13 @@
   "plugins": [
     {
       "name": "looptech",
+      "version": "0.8.0",
       "source": "./plugins/looptech",
-      "description": "Agnostic dev workflow + backend-go / frontend-react / frontend-pwa / frontend-web / database expert skills, driven by each project's CLAUDE.md Project Profile."
+      "description": "Agnostic dev workflow + backend-go / backend-python / frontend-react / frontend-vue / frontend-pwa / frontend-web / database expert skills, driven by each project's Project Profile."
     },
     {
       "name": "memory-graph",
+      "version": "0.3.3",
       "source": "./plugins/memory-graph",
       "description": "Memória de projeto num vault Obsidian: escrita pelo obsidian CLI, recall semântico + travessia de [[links]] 100% on-device (fastembed + sqlite-vec), zero nuvem. Skills: memory-vault (protocolo diário) e memory-vault-setup (vault + migração)."
     }

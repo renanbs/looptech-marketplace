@@ -284,10 +284,9 @@ plugins/
     skills/
 ```
 
-Versões dos manifests de cada plugin precisam andar juntas — `looptech` tem
-quatro (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`, e o catálogo
-raiz `.omp-plugin/marketplace.json`; ele não tem plugin.json próprio, ver
-nota acima) — atualmente `looptech` 0.8.0, `memory-graph` 0.3.3.
+Versões dos manifests de cada plugin precisam andar juntas — atualmente
+`looptech` 0.8.0, `memory-graph` 0.3.3 (declaradas em cada `plugin.json` e nos
+catálogos de cada host).
 
 ## Extensibilidade
 
