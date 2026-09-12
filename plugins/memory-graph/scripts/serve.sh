@@ -5,7 +5,7 @@ set -euo pipefail
 
 plugin_root() {
   local c here cand
-  for c in "${PLUGIN_ROOT:-}" "${CLAUDE_PLUGIN_ROOT:-}"; do
+  for c in "${PLUGIN_ROOT:-}" "${CLAUDE_PLUGIN_ROOT:-}" "${OMP_PLUGIN_ROOT:-}"; do
     if [ -n "$c" ] && [ -d "$c/memory_graph" ] && [ -f "$c/pyproject.toml" ]; then
       printf '%s\n' "$c"
       return 0
@@ -18,9 +18,10 @@ plugin_root() {
     return 0
   fi
 
-  # Newest install in Cursor / Claude plugin caches.
+  # Newest install in OMP / Cursor / Claude plugin caches.
   shopt -s nullglob
   for cand in \
+    "$HOME"/.omp/plugins/cache/plugins/*memory-graph*/ \
     "$HOME"/.cursor/plugins/cache/*/memory-graph/*/ \
     "$HOME"/.claude/plugins/cache/*/*/memory-graph/ \
     "$HOME"/.claude/plugins/cache/*/*/plugins/memory-graph/
@@ -70,7 +71,7 @@ _strip_placeholder CLAUDE_PROJECT_DIR
 if [ -z "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${CURSOR_PROJECT_DIR:-}" ]; then
   workspace="$(pwd -P 2>/dev/null || pwd)"
   case "$workspace" in
-    */.cursor/plugins/*|*/.claude/plugins/*) ;;
+    */.cursor/plugins/*|*/.claude/plugins/*|*/.omp/plugins/*) ;;
     *) export CURSOR_PROJECT_DIR="$workspace" ;;
   esac
 fi

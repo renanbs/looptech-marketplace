@@ -278,6 +278,7 @@ plugins/
     .claude-plugin/plugin.json
     .codex-plugin/plugin.json
     .cursor-plugin/plugin.json
+    .omp-plugin/plugin.json
     .mcp.json                       # Claude + Codex
     mcp.json                        # Cursor
     scripts/serve.sh                # stdio MCP, independente de CLAUDE_PLUGIN_ROOT

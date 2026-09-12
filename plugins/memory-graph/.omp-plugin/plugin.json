@@ -1,0 +1,17 @@
+{
+  "name": "memory-graph",
+  "version": "0.3.3",
+  "description": "Memória de projeto num vault Obsidian — escrita pelo obsidian CLI, recall semântico + travessia de [[links]] 100% on-device (fastembed + sqlite-vec), zero nuvem. Traz as skills memory-vault (protocolo diário) e memory-vault-setup (criação do vault + migração da memória legada).",
+  "mcpServers": {
+    "memory-graph": {
+      "command": "bash",
+      "args": [
+        "${OMP_PLUGIN_ROOT}/scripts/serve.sh"
+      ],
+      "env": {
+        "OMP_PLUGIN_ROOT": "${OMP_PLUGIN_ROOT}",
+        "CLAUDE_PLUGIN_ROOT": "${OMP_PLUGIN_ROOT}"
+      }
+    }
+  }
+}
