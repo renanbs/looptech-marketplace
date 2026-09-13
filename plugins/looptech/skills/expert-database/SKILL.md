@@ -1,14 +1,14 @@
 ---
 name: expert-database
-description: Disciplina e execução de banco de dados relacional (dialeto de referência Postgres), agnóstica ao produto. Metade A — disciplina de query: named query consts, zero SELECT *, valores só $N/:param, null.T para nullable, injection tests, testes de integração com container. Metade B — fluxo de execução: preflight de conexão (com onboarding passo a passo se não houver base configurada) → descobrir tabelas → schemas → indexes → montar query sargável → executar; produção SEMPRE exige validação humana; migrations por EXISTÊNCIA da estrutura (não por version). Carregue sempre que a tarefa tocar a camada de persistência/DB. Fatos de conexão vêm do bloco database do Project Profile.
+description: Disciplina e execução de banco de dados relacional (dialeto de referência Postgres), agnóstica ao produto. Metade A — disciplina de query: named query consts, zero SELECT *, valores só $N/:param, null.T para nullable, injection tests, testes de integração com container. Metade B — fluxo de execução: preflight de conexão (com onboarding passo a passo se não houver base configurada) → descobrir tabelas → schemas → indexes → montar query sargável → executar; produção SEMPRE exige validação humana; migrations por EXISTÊNCIA da estrutura (não por version), promovidas local → stage → produção conforme o estado da branch, com DDL não-transacional (CREATE INDEX CONCURRENTLY) tratado explicitamente. Carregue sempre que a tarefa tocar a camada de persistência/DB. Fatos de conexão vêm do bloco database do Project Profile.
 ---
 
 # expert-database — Disciplina de Query + Fluxo de Execução
 
 Skill agnóstica de produto e de dialeto. Cobre **duas metades**: (A) a disciplina de
 como escrever/estruturar queries no código do repositório, e (B) o fluxo operacional de
-como conectar, descobrir schema ao vivo e executar — incluindo o gate de produção e a
-regra de migration por existência.
+como conectar, descobrir schema ao vivo e executar — incluindo o gate de produção, a
+regra de migration por existência e a promoção de migrations entre ambientes.
 
 **Postgres é o dialeto de referência** desta skill (a sintaxe dos exemplos é Postgres),
 mas os princípios são portáveis a qualquer banco relacional. Fatos concretos — nomes de
@@ -378,6 +378,95 @@ tracking de version depois.
 8. **Registre**: ambiente, faixa de versões aplicada, data — na convenção de
    memória/log do projeto.
 
+### DDL que não roda dentro de transação
+
+Alguns comandos de DDL são recusados pelo banco quando executados dentro de um bloco de
+transação — o caso mais comum é a criação de índice sem bloquear escrita
+(`CREATE INDEX CONCURRENTLY` no Postgres). Como a maioria dos migradores envolve **cada
+migration numa transação por padrão**, a migration falha com um erro do tipo
+`cannot run inside a transaction block` mesmo com o SQL correto.
+
+**Regra:** toda migration que contém DDL não-transacional precisa desativar o wrapper de
+transação explicitamente, na sintaxe do migrador do projeto:
+
+| Migrador | Como desativar |
+| :--- | :--- |
+| goose | `-- +goose NO TRANSACTION` logo após `-- +goose Up` |
+| Rails | `disable_ddl_transaction!` na classe da migration |
+| Django | `atomic = False` no atributo da `Migration` |
+| golang-migrate | arquivo `.sql` sem wrapper (config `x-no-transaction`) |
+| Flyway | marcar o script como não-transacional |
+
+Duas consequências operacionais que decorrem disso:
+
+1. **Sem transação não há rollback automático.** Se a migration tiver mais de um comando e
+   falhar no meio, os anteriores já foram aplicados. Mantenha migrations não-transacionais
+   com **um único comando** — se precisar de dois índices concorrentes, são duas migrations.
+2. **Criação concorrente que falha deixa estrutura inválida.** No Postgres, um
+   `CREATE INDEX CONCURRENTLY` interrompido deixa um índice marcado como inválido: ele ocupa
+   espaço, é mantido atualizado nas escritas e **não é usado pelo planner**. Depois de uma
+   migration concorrente falha, verifique e limpe antes de tentar de novo:
+   ```sql
+   SELECT indexrelid::regclass AS indice FROM pg_index WHERE NOT indisvalid;
+   DROP INDEX CONCURRENTLY IF EXISTS <indice_invalido>;
+   ```
+
+---
+
+## Promoção de Migrations por Ambiente
+
+A validação por existência (seção anterior) responde **se** uma migration pode ser aplicada.
+Esta seção responde **quando** e **de onde** — o problema que ela previne não é de schema, é
+de coordenação entre pessoas.
+
+**Regra:** o ambiente em que uma migration pode rodar é determinado pelo estado dela no
+controle de versão, nunca pela conveniência de quem está desenvolvendo.
+
+1. **Desenvolvimento é 100% local.** Migration nova é criada e aplicada apenas contra o banco
+   local (container ou instância nativa na máquina do dev). Os testes de persistência rodam
+   contra esse banco.
+2. **Stage/homologação só recebe migration já mergeada** na branch de integração do projeto.
+3. **Produção só recebe migration já mergeada** na branch de release — e sob o Gate de
+   Produção acima, com validação humana explícita.
+
+> ⛔ **PROIBIDO aplicar migration em ambiente compartilhado a partir de uma branch de
+> feature.** Vale para stage e para produção, e vale mesmo que a migration "já esteja pronta".
+
+O motivo não é burocracia. Uma migration aplicada em stage direto de uma branch de feature
+cria uma alteração de schema que ninguém mais tem no código:
+
+- **Se a branch for abandonada**, o ambiente fica com uma coluna, tabela ou índice órfão que
+  nenhuma migration do repositório cria. Um banco reconstruído do zero passa a divergir do
+  stage, e a divergência só aparece no deploy seguinte.
+- **Se a migration for renumerada ou reescrita no code review** — o que é comum e desejável —
+  o tracking do ambiente aponta para uma versão que deixou de existir. A próxima aplicação
+  falha, ou pior, pula migrations silenciosamente.
+- **Se outra pessoa aplicar a migration dela na sequência**, as duas se intercalam numa ordem
+  que jamais vai se repetir em produção. O stage deixa de ser um ensaio válido do deploy
+  exatamente no momento em que mais se confia nele.
+
+O estado de um ambiente compartilhado precisa ser **reconstruível a partir da branch de
+integração sozinha**. Quando deixa de ser, ele para de testar o que vai acontecer em produção
+e passa a dar uma falsa sensação de segurança.
+
+### Preflight antes de aplicar em ambiente compartilhado
+
+Antes de qualquer comando de aplicação, rode o comando de **status** do migrador contra o
+ambiente alvo e leia a saída — nunca aplique às cegas:
+
+1. **Status primeiro.** Confirme quais migrations o ambiente já tem e quais estão pendentes.
+   Se aparecer alguma migration aplicada que **não existe no repositório**, pare: alguém
+   aplicou de uma branch de feature, e o ambiente precisa ser reconciliado antes de seguir.
+2. **Confira a lista de pendentes contra o que você espera.** Se o número de pendentes for
+   maior que o do seu merge, há trabalho de outra pessoa no meio — combine a ordem antes.
+3. **Flag `dirty`/sujo ligado → PARE.** Uma aplicação anterior falhou no meio; resolver o
+   estado sujo vem antes de qualquer migration nova.
+4. **Só então aplique**, em ordem crescente, uma a uma.
+
+Os comandos concretos de status e aplicação por ambiente (`status`, `up`, e os alvos de stage
+e produção) vêm do bloco `database` do Project Profile — esta skill define a ordem e o gate,
+não os nomes.
+
 ---
 
 ## Checklist rápido
@@ -403,6 +492,15 @@ tracking de version depois.
 - [ ] Migration: validei **existência** da estrutura-alvo antes de aplicar (não só a ordem de version)?
 - [ ] Migration aplicada? → atualizei o tracking de version na mesma operação?
 - [ ] Mudança de dado em produção registrada conforme a convenção de log do projeto?
+
+**Promoção de migrations (Metade B):**
+- [ ] Migration nova foi criada e testada **apenas no banco local**?
+- [ ] Vou aplicar em ambiente compartilhado? → a migration já está mergeada na branch de integração?
+- [ ] Rodei o comando de **status** no ambiente alvo e li a saída antes de aplicar?
+- [ ] O status mostrou apenas migrations que existem no repositório (nenhuma órfã de branch de feature)?
+- [ ] Flag `dirty`/sujo desligado no ambiente alvo?
+- [ ] Migration com DDL não-transacional (ex.: `CREATE INDEX CONCURRENTLY`) → desativei o wrapper de transação do migrador?
+- [ ] Migration não-transacional contém **um único comando** (sem rollback automático)?
 
 ---
 
