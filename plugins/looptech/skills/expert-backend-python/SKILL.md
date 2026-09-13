@@ -251,7 +251,51 @@ rate-limit) ficam no Project Profile do projeto, não nesta skill.
 
 - **Sem segredo hardcoded, sem PII em log.** `JWT_SECRET`, API keys, senhas, URLs de produção vêm
   de `Settings`/env (pydantic-settings), nunca do código. Não logue CPF/CNPJ/e-mail/dado fiscal —
-  redija na borda de logging.
+  redija na borda de logging. Duas formas concretas: prefira logar o **ID** do registro (pseudônimo
+  que leva ao dado sob acesso controlado) em vez do dado; e **nunca serialize entidade, DTO ou
+  request inteiro** num log (`logger.info(f"{payload!r}")`, `model_dump()` direto) — o conjunto de
+  campos cresce e o log nunca é revisitado. Implemente `__repr__` do tipo sensível já redigido, para
+  que o erro deixe de ser possível em vez de depender de disciplina.
+
+### 5.1 Superfície operacional
+
+O serviço expõe mais do que as rotas de produto. Métricas, health checks, spec de API e sessões de
+suporte são superfície real, e costumam ser revisadas com menos rigor justamente porque "não são
+features".
+
+- **Comparar segredo em tempo constante.** Token de scrape, assinatura de webhook e API key usam
+  `hmac.compare_digest`, nunca `==`. A comparação de string do runtime retorna no primeiro byte
+  divergente, e a diferença de tempo é mensurável pela rede — o bastante para recuperar o segredo
+  byte a byte.
+  ```python
+  import hmac
+
+  if not hmac.compare_digest(provided_token, expected_token):
+      raise HTTPException(status_code=401)
+  ```
+
+- **Endpoint de telemetria é superfície pública quando exposto.** `/metrics` entrega nomes de rota,
+  versão em execução, volume por endpoint e distribuição de latência — um mapa do sistema para quem
+  estiver medindo. Quando a porta é alcançável fora da rede interna, exija autenticação, e mantenha
+  a rota **fora de middlewares que alteram o corpo** (compressão, reescrita), que quebram scrapers.
+
+- **Nunca use PII como label de métrica.** Além de vazar dado pessoal para um sistema sem controle
+  de acesso equivalente, cada valor distinto cria uma série temporal nova — cardinalidade ilimitada
+  que esgota o servidor de métricas. Use o **template** da rota (`request.scope["route"].path`),
+  nunca o path concretizado com IDs, e um fallback fixo para requisição sem rota casada.
+
+- **Gate que degrada aberto precisa falhar o boot.** É comum — e conveniente — um middleware de
+  proteção virar no-op quando a variável correspondente está vazia, para não atrapalhar o ambiente
+  local. O risco é que um deploy com a variável faltando **não produz erro nenhum**: o serviço sobe
+  saudável e a proteção não existe. Se adotar essa forma, valide em `Settings` na inicialização e
+  **recuse subir** fora do ambiente local sem o segredo — um validator do pydantic-settings resolve.
+
+- **Acesso a dado de cliente por operador é somente leitura e auditado.** Impersonação e ferramenta
+  administrativa de suporte restringem-se a métodos de leitura — escrita impersonada destrói a
+  confiabilidade do histórico da conta como prova do que o cliente fez. E **toda** requisição
+  impersonada gera registro de auditoria (quem, sobre quem, quando, o quê), não só as negadas: é o
+  que permite responder quem da equipe acessou os dados de um titular. O log de auditoria é separado
+  do operacional, com retenção maior e acesso mais restrito.
 
 ---
 
@@ -283,6 +327,12 @@ rate-limit) ficam no Project Profile do projeto, não nesta skill.
 - [ ] Injection test cobre todo parâmetro `str` externo de repositório
 - [ ] Matriz de API + E2E de cada `/goal` de produto passam, sem skip
 - [ ] Mutação financeira/crítica serializada por lock de banco, na mesma transação
+- [ ] Comparação de segredo usa `hmac.compare_digest`, não `==`
+- [ ] Endpoint de telemetria autenticado quando alcançável fora da rede interna, e fora de middleware que altera o corpo
+- [ ] Nenhuma PII como label de métrica; label de rota usa o template, não o path com IDs
+- [ ] Gate que degrada aberto valida em `Settings` no boot e recusa subir sem o segredo fora do local
+- [ ] Impersonação/ferramenta de suporte é somente leitura e audita toda requisição
+- [ ] Nenhum log serializa entidade/DTO/request inteiro; PII redigida na borda de logging
 - [ ] `ruff check` + `ruff format` + `mypy` strict verdes; sem `# type: ignore` sem justificativa
 
 ## Red flags
@@ -297,4 +347,8 @@ rate-limit) ficam no Project Profile do projeto, não nesta skill.
 - Método RAW em fluxo tenant-facing sem guarda de ownership
 - Chamada síncrona bloqueante dentro de handler async
 - Use case importando implementação concreta em vez da `ABC`
+- Segredo comparado com `==` em vez de `hmac.compare_digest`
+- Middleware de proteção que vira no-op com env vazia, sem validação de boot
+- Escrita permitida em sessão impersonada, ou impersonação sem log de auditoria
+- `model_dump()`/`repr` de entidade, DTO ou erro cru de driver caindo em log
 - `# type: ignore` / `Any` sem justificativa; regra de ruff rebaixada para "passar"

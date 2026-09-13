@@ -186,6 +186,50 @@ allowlist de CORS, etc.) ficam no Project Profile do projeto, não nesta skill.
   papéis não-administrativos; contas com privilégio administrativo são criadas fora desse
   fluxo.
 
+### 5.1 Superfície operacional
+
+O serviço expõe mais do que as rotas de produto. Métricas, health checks, spec de API e
+sessões de suporte são superfície real, e costumam ser revisadas com menos rigor
+justamente porque "não são features".
+
+- **Comparar segredo em tempo constante.** Token de scrape, assinatura de webhook, API key
+  e qualquer comparação de segredo usa `subtle.ConstantTimeCompare`, nunca `==`. A
+  comparação de string do runtime retorna no primeiro byte divergente, e a diferença de
+  tempo é mensurável pela rede — é o bastante para recuperar o segredo byte a byte.
+  ```go
+  if subtle.ConstantTimeCompare([]byte(got), []byte(expected)) != 1 {
+      c.AbortWithStatus(http.StatusUnauthorized)
+      return
+  }
+  ```
+
+- **Endpoint de telemetria é superfície pública quando exposto.** `/metrics` entrega nomes
+  de rota, versão em execução, volume por endpoint e distribuição de latência — um mapa do
+  sistema para quem estiver medindo. Quando a porta é alcançável fora da rede interna, exija
+  autenticação. Mantenha a rota também **fora de middlewares que alteram o corpo** (compressão,
+  reescrita), que quebram scrapers.
+
+- **Gate que degrada aberto precisa falhar o boot.** É comum — e conveniente — um middleware
+  de proteção virar no-op quando a variável de ambiente correspondente está vazia, para não
+  atrapalhar o ambiente local. O risco é que um deploy com a variável faltando **não produz
+  erro nenhum**: o serviço sobe saudável e a proteção simplesmente não existe. Se adotar essa
+  forma, valide a configuração na inicialização e **recuse subir** em ambiente não-local sem o
+  segredo. Fail-open silencioso só é aceitável onde a ausência é impossível de passar
+  despercebida.
+
+- **Acesso a dado de cliente por operador é somente leitura e auditado.** Impersonação e
+  ferramenta administrativa de suporte restringem-se a métodos de leitura — escrita
+  impersonada destrói a confiabilidade do histórico da conta como prova do que o cliente fez.
+  E **toda** requisição impersonada gera registro de auditoria (quem, sobre quem, quando, o
+  quê), não só as negadas: é o que permite responder quem da equipe acessou os dados de um
+  titular.
+
+- **Sem segredo hardcoded, sem PII em log.** Chaves, tokens e URLs de produção vêm de
+  configuração/env, nunca do código. Dado pessoal (documento, telefone, e-mail, endereço) é
+  mascarado na borda de logging — logue o ID do registro, que é pseudônimo e leva ao dado sob
+  acesso controlado, em vez do dado em si. Nunca serialize struct de domínio ou request inteiro
+  num log (`%+v`, `zap.Any`): o conjunto de campos cresce e o log nunca é revisitado.
+
 ---
 
 ## 6. Delegação — o que NÃO é desta skill
@@ -213,6 +257,11 @@ allowlist de CORS, etc.) ficam no Project Profile do projeto, não nesta skill.
 - [ ] Coluna nova tem migration **e** `<tabela>Columns` atualizado na mesma PR
 - [ ] Todo acesso a recurso verifica ownership (não só autenticação)
 - [ ] Mutação financeira serializada por lock de banco, leitura+escrita na mesma transação
+- [ ] Comparação de segredo usa `subtle.ConstantTimeCompare`, não `==`
+- [ ] Endpoint de telemetria autenticado quando alcançável fora da rede interna, e fora de middleware que altera o corpo
+- [ ] Gate que degrada aberto valida a config no boot e recusa subir sem o segredo fora do ambiente local
+- [ ] Impersonação/ferramenta de suporte é somente leitura e audita toda requisição
+- [ ] Nenhum log serializa struct de domínio/request inteiro; PII mascarada na borda de logging
 - [ ] Lint limpo na forma only-new-issues (comando exato do Project Profile)
 - [ ] Testes unitários, matriz de API e E2E de cada `/goal` de produto passam, sem skip
 
@@ -225,4 +274,8 @@ allowlist de CORS, etc.) ficam no Project Profile do projeto, não nesta skill.
 - Mutação financeira fora de um bloco de lock transacional
 - Rota administrativa sem middleware de restrição administrativa
 - Acesso a recurso sem checagem de ownership
+- Segredo comparado com `==` em vez de comparação em tempo constante
+- Middleware de proteção que vira no-op com env vazia, sem validação de boot
+- Escrita permitida em sessão impersonada, ou impersonação sem log de auditoria
+- `%+v` / `zap.Any` sobre struct de domínio, request ou erro cru de driver em log
 - Caso de uso importando tipo concreto de infraestrutura em vez de interface (`port`)
